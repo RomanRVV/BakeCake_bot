@@ -6,3 +6,7 @@ from .models import *
 class CakeAdmin(admin.ModelAdmin):
     pass
 
+
+@admin.register(CakeConstructor)
+class CakeConstructorAdmin(admin.ModelAdmin):
+    pass
