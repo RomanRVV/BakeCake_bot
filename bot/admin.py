@@ -10,3 +10,11 @@ class CakeAdmin(admin.ModelAdmin):
 @admin.register(CakeConstructor)
 class CakeConstructorAdmin(admin.ModelAdmin):
     pass
+
+
+@admin.register(LinkStatistics)
+class LinkStatisticsAdmin(admin.ModelAdmin):
+    readonly_fields = ['transitions']
+    list_display = ('description',
+                    'title',
+                    'transitions')

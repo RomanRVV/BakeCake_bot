@@ -16,7 +16,7 @@ from environs import Env
 env = Env()
 env.read_env()
 tg_token = env('TG_TOKEN')
-# tg_token = '6238389218:AAFQK-aNH7ziSmTy-gev9Mg0nvk6gEHZDMA'
+bitly_token = env('BITLY_TOKEN')
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 

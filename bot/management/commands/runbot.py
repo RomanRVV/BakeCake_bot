@@ -3,7 +3,7 @@ import datetime
 from django.core.management.base import BaseCommand
 from django.db.models import Q, Count
 from BakeCake import settings
-from ...models import Cake
+from bot.models import Cake
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -73,6 +73,7 @@ class Command(BaseCommand):
                 text="Как вы хотите записаться", reply_markup=reply_markup
             )
             return 'MAKE_ORDER'
+
         def make_cake(update, _):
             query = update.callback_query
             keyboard = [
@@ -112,6 +113,7 @@ class Command(BaseCommand):
 
 
                 keyboard = [[InlineKeyboardButton("Выбрать", callback_data=f"select_cake_{cake.id}")]]
+
                 reply_markup = InlineKeyboardMarkup(keyboard)
 
                 context.bot.send_message(

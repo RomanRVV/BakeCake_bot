@@ -1,6 +1,6 @@
 
-
 from django.db import models
+
 
 
 class Cake(models.Model):
@@ -39,3 +39,9 @@ class CakeConstructor(models.Model):
     blackberry = models.BooleanField(verbose_name='Еживика', default=False)
     raspberry = models.BooleanField(verbose_name='Малина', default=False)
     blueberry = models.BooleanField(verbose_name='Голубика', default=False)
+
+
+class LinkStatistics(models.Model):
+    title = models.CharField(max_length=200, verbose_name='Bitly ссылка')
+    description = models.TextField(verbose_name='Описание ссылки')
+    transitions = models.IntegerField(verbose_name='Количество переходов по ссылке', default=0)
