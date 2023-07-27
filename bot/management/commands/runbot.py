@@ -19,7 +19,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
 )
-from phonenumbers import is_valid_number, parse
+# from phonenumbers import is_valid_number, parse
 
 
 class Command(BaseCommand):
@@ -77,6 +77,7 @@ class Command(BaseCommand):
         def make_cake(update, _):
             query = update.callback_query
             keyboard = [
+                [InlineKeyboardButton("Количество уровней", callback_data="level_cake"),],
                 [InlineKeyboardButton("На главную", callback_data="to_start"),],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -87,6 +88,26 @@ class Command(BaseCommand):
                 reply_markup=reply_markup
             )
             return 'MAKE_CAKE'
+        
+
+        def level_cake(update, _):
+            query = update.callback_query
+            keyboard = [
+                [InlineKeyboardButton("1 уровень", callback_data="level_cake_1"),],
+                [InlineKeyboardButton("2 уровень", callback_data="level_cake_2"),],
+                [InlineKeyboardButton("3 уровень", callback_data="level_cake_3"),],
+                [InlineKeyboardButton("Назад", callback_data="make_cake"),],
+                [InlineKeyboardButton("На главную", callback_data="to_start"),],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.answer()
+            text = 'Выбор уровней'
+            query.edit_message_text(
+                text=text,
+                reply_markup=reply_markup
+            )
+            return 'LEVEL_CHOICES'
+
 
         def choose_cake(update, context):
             query = update.callback_query
@@ -223,11 +244,16 @@ class Command(BaseCommand):
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
 
                 ],
+                'LEVEL_CHOICES': [
+                    CallbackQueryHandler(make_cake, pattern='make_cake'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                ],
                 'CHOOSE_CAKE': [
                     CallbackQueryHandler(select_cake, pattern=r'select_cake_\d+'),
                 ],
                 'MAKE_CAKE': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
+                    CallbackQueryHandler(level_cake, pattern='level_cake'),
                 ],
                 'CALL_SALON': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
