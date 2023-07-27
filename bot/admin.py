@@ -14,7 +14,8 @@ class CakeConstructorAdmin(admin.ModelAdmin):
 
 @admin.register(LinkStatistics)
 class LinkStatisticsAdmin(admin.ModelAdmin):
-    readonly_fields = ['transitions']
+    readonly_fields = ('transitions',
+                       'bitlink')
     list_display = ('description',
-                    'title',
+                    'bitlink',
                     'transitions')

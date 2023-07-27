@@ -28,6 +28,6 @@ class Command(BaseCommand):
         while True:
             links = LinkStatistics.objects.all()
             for link in links:
-                clicks_count = count_clicks(bitly_token, link.title)
+                clicks_count = count_clicks(bitly_token, link.bitlink)
                 link.transitions = clicks_count
                 link.save()

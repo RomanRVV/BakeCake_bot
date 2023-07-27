@@ -1,4 +1,5 @@
-
+import requests
+from BakeCake.settings import bitly_token
 from django.db import models
 
 
@@ -42,6 +43,25 @@ class CakeConstructor(models.Model):
 
 
 class LinkStatistics(models.Model):
-    title = models.CharField(max_length=200, verbose_name='Bitly ссылка')
+    def save(self, *args, **kwargs):
+        def shorten_link(token, link):
+            url = 'https://api-ssl.bitly.com/v4/bitlinks'
+            headers = {
+                "Authorization": f"Bearer {token}"
+            }
+            body = {
+                "long_url": link
+            }
+            response = requests.post(url, headers=headers, json=body)
+            response.raise_for_status()
+            bitlink = response.json()['link']
+            return bitlink
+
+        if self.link:
+            self.bitlink = shorten_link(bitly_token, self.link)
+        super().save(*args, **kwargs)
+
+    link = models.CharField(max_length=200, verbose_name='Простая ссылка')
+    bitlink = models.CharField(max_length=200, verbose_name='Bitly ссылка', blank=True)
     description = models.TextField(verbose_name='Описание ссылки')
     transitions = models.IntegerField(verbose_name='Количество переходов по ссылке', default=0)
