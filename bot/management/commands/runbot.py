@@ -9,7 +9,8 @@ from telegram import (
     InlineKeyboardMarkup,
     ReplyKeyboardRemove,
     ParseMode,
-    LabeledPrice
+    LabeledPrice,
+    InputMediaPhoto
 )
 from telegram.ext import (
     Updater,
@@ -52,11 +53,10 @@ class Command(BaseCommand):
 
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-
             update.effective_message.reply_text(
-                text=f"Описание компании", reply_markup=reply_markup,
-                parse_mode=ParseMode.HTML
-            )
+                text=f"Описание компании",
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML)
             return 'GREETINGS'
 
         def make_order(update, _):
@@ -112,6 +112,7 @@ class Command(BaseCommand):
             else:
                 context.chat_data['level_cake'] = 'three'
                 context.chat_data['level_cake_price'] = 300
+            price = context.chat_data['level_cake_price']
             keyboard = [
                 [
                     InlineKeyboardButton("Ванильный бисквит", callback_data="choose_base_cake_1"),
@@ -129,7 +130,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
-            text = 'Выбор основы'
+            text = f'Выбор основы\nЦена торта-{price}руб.'
             query.edit_message_text(
                 text=text,
                 reply_markup=reply_markup
@@ -147,6 +148,7 @@ class Command(BaseCommand):
             else:
                 context.chat_data['base_cake'] = 'marble'
                 context.chat_data['base_cake_price'] = 300
+            price = context.chat_data['level_cake_price']+context.chat_data['base_cake_price']
             keyboard = [
                 [
                     InlineKeyboardButton("Клиновый сироп", callback_data="choose_topping_cake_1"),
@@ -164,7 +166,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
-            text = 'Выбор топпинга'
+            text = f'Выбор топпинга\nЦена торта-{price}руб.'
             query.edit_message_text(
                 text=text,
                 reply_markup=reply_markup
@@ -183,6 +185,8 @@ class Command(BaseCommand):
             else:
                 context.chat_data['topping'] = ''
                 context.chat_data['topping_price'] = 0
+            price = context.chat_data['level_cake_price'] + context.chat_data['base_cake_price']\
+                    +context.chat_data['topping_price']
             keyboard = [
                 [
                     InlineKeyboardButton("Да", callback_data="blackberry_yes"),
@@ -197,7 +201,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
-            text = 'Добавить ли еживику?'
+            text = f'Добавить ли еживику?\nЦена торта-{price}руб.'
             query.edit_message_text(
                 text=text,
                 reply_markup=reply_markup
@@ -213,6 +217,8 @@ class Command(BaseCommand):
             else:
                 context.chat_data['blackberry'] = False
                 context.chat_data['blackberry_price'] = 0
+            price = context.chat_data['level_cake_price'] + context.chat_data['base_cake_price'] \
+                    +context.chat_data['topping_price']+context.chat_data['blackberry_price']
             keyboard = [
                 [
                     InlineKeyboardButton("Да", callback_data="raspberry_yes"),
@@ -227,7 +233,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
-            text = 'Добавить ли малину?'
+            text = f'Добавить ли малину?\nЦена торта-{price}руб.'
             query.edit_message_text(
                 text=text,
                 reply_markup=reply_markup
@@ -243,6 +249,9 @@ class Command(BaseCommand):
             else:
                 context.chat_data['raspberry'] = False
                 context.chat_data['raspberry_price'] = 0
+            price = context.chat_data['level_cake_price'] + context.chat_data['base_cake_price'] \
+                    + context.chat_data['topping_price'] + context.chat_data['blackberry_price']\
+                    +context.chat_data['raspberry_price']
             keyboard = [
                 [
                     InlineKeyboardButton("Да", callback_data="blueberry_yes"),
@@ -257,7 +266,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
-            text = 'Добавить ли голубику?'
+            text = f'Добавить ли голубику?\nЦена торта-{price}руб.'
             query.edit_message_text(
                 text=text,
                 reply_markup=reply_markup
