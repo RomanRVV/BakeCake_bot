@@ -2,6 +2,11 @@ from django.contrib import admin
 from .models import *
 
 
+@admin.register(Member)
+class MemberAdmin(admin.ModelAdmin):
+    pass
+
+
 @admin.register(Cake)
 class CakeAdmin(admin.ModelAdmin):
     pass
@@ -19,3 +24,5 @@ class LinkStatisticsAdmin(admin.ModelAdmin):
     list_display = ('description',
                     'bitlink',
                     'transitions')
+
+

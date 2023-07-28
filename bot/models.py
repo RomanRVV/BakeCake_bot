@@ -3,6 +3,16 @@ from BakeCake.settings import bitly_token
 from django.db import models
 
 
+class Member(models.Model):
+    chat_id = models.CharField(max_length=100,
+                               verbose_name='ID чата участника',
+                               null=True, blank=True)
+    name = models.CharField(max_length=40, verbose_name='Имя участника',
+                            null=True, blank=True)
+
+    def __str__(self):
+        return self.name if self.name else "Unnamed member"
+
 
 class Cake(models.Model):
     name = models.CharField(max_length=100)
@@ -40,6 +50,10 @@ class CakeConstructor(models.Model):
     blackberry = models.BooleanField(verbose_name='Еживика', default=False)
     raspberry = models.BooleanField(verbose_name='Малина', default=False)
     blueberry = models.BooleanField(verbose_name='Голубика', default=False)
+    client = models.ForeignKey(Member,
+                               on_delete=models.CASCADE,
+                               verbose_name='Заказчик',
+                               related_name='orders')
 
 
 class LinkStatistics(models.Model):
