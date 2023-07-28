@@ -19,7 +19,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
 )
-from phonenumbers import is_valid_number, parse
+# from phonenumbers import is_valid_number, parse
 
 
 class Command(BaseCommand):
@@ -77,7 +77,12 @@ class Command(BaseCommand):
         def make_cake(update, _):
             query = update.callback_query
             keyboard = [
-                [InlineKeyboardButton("На главную", callback_data="to_start"),],
+                [
+                    InlineKeyboardButton("Количество уровней", callback_data="choose_level_cake"),
+                ],
+                [
+                    InlineKeyboardButton("На главную", callback_data="to_start"),
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
@@ -87,6 +92,95 @@ class Command(BaseCommand):
                 reply_markup=reply_markup
             )
             return 'MAKE_CAKE'
+        
+
+        def choose_level_cake(update, _):
+            query = update.callback_query
+            keyboard = [
+                [
+                    InlineKeyboardButton("1 уровень", callback_data="choose_base_cake"),
+                    InlineKeyboardButton("2 уровень +200р", callback_data="choose_base_cake"),
+                    InlineKeyboardButton("3 уровень +200р", callback_data="choose_base_cake"),
+                ],
+                [
+                    InlineKeyboardButton("Назад", callback_data="make_cake"),
+                    InlineKeyboardButton("На главную", callback_data="to_start"),
+                ],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.answer()
+            text = 'Выбор уровней'
+            query.edit_message_text(
+                text=text,
+                reply_markup=reply_markup
+            )
+            return 'LEVEL_CAKE'
+
+        def choose_base_cake(update, _):
+            query = update.callback_query
+            keyboard = [
+                [
+                    InlineKeyboardButton("Ванильный бисквит", callback_data="choose_topping_cake"),
+                ],
+                [
+                    InlineKeyboardButton("Шоколадный бисквит", callback_data="choose_topping_cake"),
+                ],
+                [
+                    InlineKeyboardButton("Мраморный бисквит", callback_data="choose_topping_cake"),
+                ],
+                [
+                    InlineKeyboardButton("Назад", callback_data="choose_level_cake"),
+                    InlineKeyboardButton("На главную", callback_data="to_start"),
+                ],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.answer()
+            print(query.data)
+            text = 'Выбор основы'
+            query.edit_message_text(
+                text=text,
+                reply_markup=reply_markup
+            )
+            return 'CAKE_BASE_CHOICES'
+        
+            
+        def choose_topping(update, _):
+            query = update.callback_query
+            keyboard = [
+                [
+                    InlineKeyboardButton("Клиновый сироп +100р", callback_data="check_order"),
+                ],
+                [
+                    InlineKeyboardButton("Карамельный сироп +100р", callback_data="check_order"),
+                ],
+                [
+                    InlineKeyboardButton("Без топпинга", callback_data="check_order"),
+                ],
+                [
+                    InlineKeyboardButton("Назад", callback_data="choose_base_cake"),
+                    InlineKeyboardButton("На главную", callback_data="to_start"),
+                ],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.answer()
+            text = 'Выбор топпинга'
+            query.edit_message_text(
+                text=text,
+                reply_markup=reply_markup
+            )
+            
+            return 'TOPPING_CHOICES'
+        
+        def check_order(update, _):
+            query = update.callback_query
+            cakes = Cake.objects.all()
+            print(cakes)
+            # query = update.callback_query
+            # text = 'Вы выбрали'
+            # query.edit_message_text(
+            #     text=text,
+            #     reply_markup=reply_markup
+            # )
 
         def choose_cake(update, context):
             query = update.callback_query
@@ -223,11 +317,27 @@ class Command(BaseCommand):
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
 
                 ],
+                'LEVEL_CAKE': [
+                    CallbackQueryHandler(choose_base_cake, pattern='choose_base_cake'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                ],
+                'CAKE_BASE_CHOICES':[
+                    CallbackQueryHandler(choose_level_cake, pattern='choose_level_cake'),
+                    CallbackQueryHandler(choose_topping, pattern='choose_topping'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                ],
+                'TOPPING_CHOICES':[
+                    CallbackQueryHandler(choose_base_cake, pattern='choose_base_cake'),
+                    CallbackQueryHandler(check_order, pattern='check_order'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                ],
                 'CHOOSE_CAKE': [
                     CallbackQueryHandler(select_cake, pattern=r'select_cake_\d+'),
                 ],
                 'MAKE_CAKE': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
+                    CallbackQueryHandler(choose_level_cake, pattern='choose_level_cake'),
+                    CallbackQueryHandler(choose_topping, pattern='choose_topping_cake'),
                 ],
                 'CALL_SALON': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
