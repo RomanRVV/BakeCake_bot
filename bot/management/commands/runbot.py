@@ -1,5 +1,5 @@
 import datetime
-
+import sqlite3
 from django.core.management.base import BaseCommand
 from django.db.models import Q, Count
 from BakeCake import settings
@@ -24,6 +24,20 @@ from telegram.ext import (
 
 class Command(BaseCommand):
     help = 'Телеграм-бот'
+
+    def __init__(self):
+        # self.conn = sqlite3.connect('db.sqlite3')
+        self.conn = sqlite3.connect('db.sqlite3', check_same_thread=False)
+        self.cur = self.conn.cursor()
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS cake(
+                            prise INTEGER,
+                            level INTEGER,
+                            base TEXT,
+                            topping TEXT
+                            );
+                        """)
+        self.conn.commit()
+
 
     def handle(self, *args, **kwargs):
         # tg_token = settings.TOKEN
@@ -98,7 +112,7 @@ class Command(BaseCommand):
             query = update.callback_query
             keyboard = [
                 [
-                    InlineKeyboardButton("1 уровень", callback_data="choose_base_cake"),
+                    InlineKeyboardButton("1 уровень", callback_data="choose_base_cake_1"),
                     InlineKeyboardButton("2 уровень +200р", callback_data="choose_base_cake"),
                     InlineKeyboardButton("3 уровень +200р", callback_data="choose_base_cake"),
                 ],
@@ -115,6 +129,36 @@ class Command(BaseCommand):
                 reply_markup=reply_markup
             )
             return 'LEVEL_CAKE'
+
+        def choose_base_cake_1(update, _):
+            query = update.callback_query
+            keyboard = [
+                [
+                    InlineKeyboardButton("Ванильный бисквит", callback_data="choose_topping_cake"),
+                ],
+                [
+                    InlineKeyboardButton("Шоколадный бисквит", callback_data="choose_topping_cake"),
+                ],
+                [
+                    InlineKeyboardButton("Мраморный бисквит", callback_data="choose_topping_cake"),
+                ],
+                [
+                    InlineKeyboardButton("Назад", callback_data="choose_level_cake"),
+                    InlineKeyboardButton("На главную", callback_data="to_start"),
+                ],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.answer()
+            level_1 = 1
+            prise_level_1 = 200
+            check_order(level_1)
+            text = 'Выбор основы'
+            query.edit_message_text(
+                text=text,
+                reply_markup=reply_markup
+            )
+            return 'CAKE_BASE_CHOICES'
+        
 
         def choose_base_cake(update, _):
             query = update.callback_query
@@ -135,7 +179,6 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
-            print(query.data)
             text = 'Выбор основы'
             query.edit_message_text(
                 text=text,
@@ -173,14 +216,27 @@ class Command(BaseCommand):
         
         def check_order(update, _):
             query = update.callback_query
-            cakes = Cake.objects.all()
-            print(cakes)
-            # query = update.callback_query
-            # text = 'Вы выбрали'
-            # query.edit_message_text(
-            #     text=text,
-            #     reply_markup=reply_markup
-            # )
+            keyboard = [
+                [
+                    InlineKeyboardButton("Проверить", callback_data="check_order"),
+                ],
+                [
+                    InlineKeyboardButton("Назад", callback_data="choose_topping"),
+                    InlineKeyboardButton("На главную", callback_data="to_start"),
+                ],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.answer()
+            text = 'Проверьте заказ'
+            query.edit_message_text(
+                text=text,
+                reply_markup=reply_markup
+            )
+            # self.cur.execute("INSERT INTO cake VALUES (?);", level)
+            # self.conn.commit()
+            # print(query.message.reply_markup)
+            return 'CHECK_ORDER'
+            
 
         def choose_cake(update, context):
             query = update.callback_query
@@ -319,6 +375,7 @@ class Command(BaseCommand):
                 ],
                 'LEVEL_CAKE': [
                     CallbackQueryHandler(choose_base_cake, pattern='choose_base_cake'),
+                    CallbackQueryHandler(choose_base_cake_1, pattern='choose_base_cake_1'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'CAKE_BASE_CHOICES':[
@@ -328,7 +385,12 @@ class Command(BaseCommand):
                 ],
                 'TOPPING_CHOICES':[
                     CallbackQueryHandler(choose_base_cake, pattern='choose_base_cake'),
+                    CallbackQueryHandler(choose_base_cake_1, pattern='choose_base_cake_1'),
                     CallbackQueryHandler(check_order, pattern='check_order'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                ],
+                'CHECK_ORDER':[
+                    CallbackQueryHandler(choose_topping, pattern='choose_topping'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'CHOOSE_CAKE': [
