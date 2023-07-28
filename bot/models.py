@@ -1,6 +1,17 @@
-
+import requests
+from BakeCake.settings import bitly_token
 from django.db import models
 
+
+class Member(models.Model):
+    chat_id = models.CharField(max_length=100,
+                               verbose_name='ID чата участника',
+                               null=True, blank=True)
+    name = models.CharField(max_length=40, verbose_name='Имя участника',
+                            null=True, blank=True)
+
+    def __str__(self):
+        return self.name if self.name else "Unnamed member"
 
 
 class Cake(models.Model):
@@ -39,9 +50,32 @@ class CakeConstructor(models.Model):
     blackberry = models.BooleanField(verbose_name='Еживика', default=False)
     raspberry = models.BooleanField(verbose_name='Малина', default=False)
     blueberry = models.BooleanField(verbose_name='Голубика', default=False)
+    client = models.ForeignKey(Member,
+                               on_delete=models.CASCADE,
+                               verbose_name='Заказчик',
+                               related_name='orders')
 
 
 class LinkStatistics(models.Model):
-    title = models.CharField(max_length=200, verbose_name='Bitly ссылка')
+    def save(self, *args, **kwargs):
+        def shorten_link(token, link):
+            url = 'https://api-ssl.bitly.com/v4/bitlinks'
+            headers = {
+                "Authorization": f"Bearer {token}"
+            }
+            body = {
+                "long_url": link
+            }
+            response = requests.post(url, headers=headers, json=body)
+            response.raise_for_status()
+            bitlink = response.json()['link']
+            return bitlink
+
+        if self.link:
+            self.bitlink = shorten_link(bitly_token, self.link)
+        super().save(*args, **kwargs)
+
+    link = models.CharField(max_length=200, verbose_name='Простая ссылка')
+    bitlink = models.CharField(max_length=200, verbose_name='Bitly ссылка', blank=True)
     description = models.TextField(verbose_name='Описание ссылки')
     transitions = models.IntegerField(verbose_name='Количество переходов по ссылке', default=0)
