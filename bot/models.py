@@ -1,13 +1,13 @@
 import requests
-from BakeCake.settings import bitly_token
+# from BakeCake.settings import bitly_token
 from django.db import models
-
+from django.contrib.auth.models import User
 
 
 class Cake(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.IntegerField()
     image = models.ImageField(upload_to='cakes/')
 
 
@@ -65,3 +65,14 @@ class LinkStatistics(models.Model):
     bitlink = models.CharField(max_length=200, verbose_name='Bitly ссылка', blank=True)
     description = models.TextField(verbose_name='Описание ссылки')
     transitions = models.IntegerField(verbose_name='Количество переходов по ссылке', default=0)
+
+
+class CakeOrder(models.Model):
+
+    user_id = models.CharField(max_length=100, null=True)
+    user_name = models.CharField(max_length=100, null=True)
+    user_phone = models.CharField(max_length=20, null=True)
+    delivery_date = models.DateField(null=True)
+    delivery_time = models.TimeField(null=True)
+    delivery_address = models.CharField(max_length=200, null=True)
+    cake = models.ForeignKey(null=True, on_delete=models.SET_NULL, to='bot.Cake')

@@ -11,7 +11,9 @@ class CakeAdmin(admin.ModelAdmin):
 class CakeConstructorAdmin(admin.ModelAdmin):
     pass
 
-
+@admin.register(CakeOrder)
+class CakeOrderAdmin(admin.ModelAdmin):
+    pass
 @admin.register(LinkStatistics)
 class LinkStatisticsAdmin(admin.ModelAdmin):
     readonly_fields = ('transitions',
