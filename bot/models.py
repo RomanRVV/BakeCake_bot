@@ -29,7 +29,7 @@ class CakeConstructor(models.Model):
         ('honey_biscuits', 'Медовое печенье')
     ]
     TOPPING_CHOICES = [
-        ('wedge', 'Клиновый сироп'),
+        ('wedge', 'Кленовый сироп'),
         ('caramel', 'Карамельный сироп'),
         ('milk_choco', 'Молочный шоколад'),
         ('blueberry_syrup', 'Черничный сироп'),
@@ -41,21 +41,38 @@ class CakeConstructor(models.Model):
         ('two', '2 уровня'),
         ('three', '3 уровня')
     ]
+    SHAPE_CHOICES = [
+        ('square', 'Квадрат'),
+        ('circle', 'Круг'),
+        ('rectangle', 'Прямоугольник')
+    ]
+    BERRIES_CHOICES = [
+        ('blackberry', 'Еживика'),
+        ('raspberry', 'Малина'),
+        ('blueberry', 'Голубика'),
+        ('strawberry', 'Клубника')
+    ]
     num_of_level = models.CharField(max_length=5, choices=LEVEL_CHOICES,
                                     verbose_name='Количество уровней торта',
                                     default='one')
-    base_of_cake = models.CharField(max_length=6,
+    cake_shape = models.CharField(max_length=20, choices=SHAPE_CHOICES,
+                                  verbose_name='Форма торта',
+                                  default='circle')
+    base_of_cake = models.CharField(max_length=20,
                                     choices=CAKE_BASE_CHOICES,
                                     default='vanila',
                                     verbose_name='Основа для торта')
-    topping = models.CharField(max_length=7,
+    topping = models.CharField(max_length=20,
                                choices=TOPPING_CHOICES,
                                blank=True,
                                verbose_name='Топпинг')
-    blackberry = models.BooleanField(verbose_name='Еживика', default=False)
-    raspberry = models.BooleanField(verbose_name='Малина', default=False)
-    blueberry = models.BooleanField(verbose_name='Голубика', default=False)
-    strawberry = models.BooleanField(verbose_name='Клубника', default=False)
+    berries = models.CharField(max_length=20,
+                               choices=BERRIES_CHOICES,
+                               blank=True,
+                               verbose_name='Ягоды')
+    inscription = models.CharField(max_length=200,
+                                   blank=True,
+                                   verbose_name='Надпись на торте')
     client = models.ForeignKey(Member,
                                on_delete=models.CASCADE,
                                verbose_name='Заказчик',
