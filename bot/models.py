@@ -25,11 +25,16 @@ class CakeConstructor(models.Model):
     CAKE_BASE_CHOICES = [
         ('vanila', 'Ванильный бисквит'),
         ('choco', 'Шоколадный бисквит'),
-        ('marble', 'Мраморный бисквит')
+        ('marble', 'Мраморный бисквит'),
+        ('honey_biscuits', 'Медовое печенье')
     ]
     TOPPING_CHOICES = [
         ('wedge', 'Клиновый сироп'),
-        ('caramel', 'Карамельный сироп')
+        ('caramel', 'Карамельный сироп'),
+        ('milk_choco', 'Молочный шоколад'),
+        ('blueberry_syrup', 'Черничный сироп'),
+        ('strawberry_syrup', 'Клубничный сироп'),
+        ('white_sauce', 'Белый соус')
     ]
     LEVEL_CHOICES = [
         ('one', '1 уровень'),
@@ -50,6 +55,7 @@ class CakeConstructor(models.Model):
     blackberry = models.BooleanField(verbose_name='Еживика', default=False)
     raspberry = models.BooleanField(verbose_name='Малина', default=False)
     blueberry = models.BooleanField(verbose_name='Голубика', default=False)
+    strawberry = models.BooleanField(verbose_name='Клубника', default=False)
     client = models.ForeignKey(Member,
                                on_delete=models.CASCADE,
                                verbose_name='Заказчик',

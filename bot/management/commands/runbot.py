@@ -116,12 +116,11 @@ class Command(BaseCommand):
             keyboard = [
                 [
                     InlineKeyboardButton("Ванильный бисквит", callback_data="choose_base_cake_1"),
-                ],
-                [
                     InlineKeyboardButton("Шоколадный бисквит", callback_data="choose_base_cake_2"),
                 ],
                 [
                     InlineKeyboardButton("Мраморный бисквит", callback_data="choose_base_cake_3"),
+                    InlineKeyboardButton("Медовое печенье", callback_data="choose_base_cake_4"),
                 ],
                 [
                     InlineKeyboardButton("Назад", callback_data="choose_level_cake"),
@@ -145,19 +144,30 @@ class Command(BaseCommand):
             elif query.data == 'choose_base_cake_2':
                 context.chat_data['base_cake'] = 'choco'
                 context.chat_data['base_cake_price'] = 200
-            else:
+            elif query.data == 'choose_base_cake_3':
                 context.chat_data['base_cake'] = 'marble'
                 context.chat_data['base_cake_price'] = 300
+            else:
+                context.chat_data['base_cake'] = 'honey_biscuits'
+                context.chat_data['base_cake_price'] = 300
+        
             price = context.chat_data['level_cake_price']+context.chat_data['base_cake_price']
+
             keyboard = [
                 [
                     InlineKeyboardButton("Клиновый сироп", callback_data="choose_topping_cake_1"),
-                ],
-                [
                     InlineKeyboardButton("Карамельный сироп", callback_data="choose_topping_cake_2"),
                 ],
                 [
-                    InlineKeyboardButton("Без топпинга", callback_data="choose_topping_cake_3"),
+                    InlineKeyboardButton("Молочный шоколад", callback_data="choose_topping_cake_3"),
+                    InlineKeyboardButton("Черничный сироп", callback_data="choose_topping_cake_4"),
+                ],
+                [
+                    InlineKeyboardButton("Клубничный сироп", callback_data="choose_topping_cake_5"),
+                    InlineKeyboardButton("Белый соус", callback_data="choose_topping_cake_6"),
+                ],
+                [
+                    InlineKeyboardButton("Без топпинга", callback_data="choose_topping_cake_0"),
                 ],
                 [
                     InlineKeyboardButton("Назад", callback_data="choose_base_cake"),
@@ -182,6 +192,18 @@ class Command(BaseCommand):
             elif query.data == 'choose_topping_cake_2':
                 context.chat_data['topping'] = 'caramel'
                 context.chat_data['topping_price'] = 200
+            elif query.data == 'choose_topping_cake_3':
+                context.chat_data['topping'] = 'milk_choco'
+                context.chat_data['topping_price'] = 200
+            elif query.data == 'choose_topping_cake_4':
+                context.chat_data['topping'] = 'blueberry_syrup'
+                context.chat_data['topping_price'] = 350 
+            elif query.data == 'choose_topping_cake_5':
+                context.chat_data['topping'] = 'strawberry_syrup'
+                context.chat_data['topping_price'] = 300
+            elif query.data == 'choose_topping_cake_6':
+                context.chat_data['topping'] = 'white_sauce'
+                context.chat_data['topping_price'] = 200   
             else:
                 context.chat_data['topping'] = ''
                 context.chat_data['topping_price'] = 0
@@ -274,6 +296,36 @@ class Command(BaseCommand):
 
             return 'BLUEBERRY_CHOICES'
         
+        def add_strawberry(update, context):
+            query = update.callback_query
+            if query.data == 'strawberry_yes':
+                context.chat_data['strawberry'] = True
+                context.chat_data['strawberry_price'] = 500
+            else:
+                context.chat_data['strawberry'] = False
+                context.chat_data['strawberry_price'] = 0
+            keyboard = [
+                [
+                    InlineKeyboardButton("Да", callback_data="blueberry_yes"),
+                ],
+                [
+                    InlineKeyboardButton("Нет", callback_data="blueberry_no"),
+                ],
+                [
+                    InlineKeyboardButton("Назад", callback_data="add_raspberry"),
+                    InlineKeyboardButton("На главную", callback_data="to_start"),
+                ],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.answer()
+            text = 'Добавить ли клубнику?'
+            query.edit_message_text(
+                text=text,
+                reply_markup=reply_markup
+            )
+
+            return 'STRAWBERRY_CHOICES'
+        
         def check_order(update, context):
             query = update.callback_query
             if query.data == 'blueberry_yes':
@@ -284,7 +336,8 @@ class Command(BaseCommand):
                 context.chat_data['blueberry_price'] = 0
             total_price = context.chat_data['level_cake_price']+context.chat_data['base_cake_price']\
                           +context.chat_data['topping_price']+context.chat_data['blackberry_price']\
-                          +context.chat_data['raspberry_price']+context.chat_data['blueberry_price']
+                          +context.chat_data['raspberry_price']+context.chat_data['blueberry_price']\
+                          +context.chat_data['strawberry_price']
             keyboard = [
                 [
                     InlineKeyboardButton("Оформить заказ", callback_data="to_order"),
@@ -314,6 +367,7 @@ class Command(BaseCommand):
                                            blackberry=context.chat_data['raspberry'],
                                            raspberry=context.chat_data['raspberry'],
                                            blueberry=context.chat_data['blueberry'],
+                                           strawberry=context.chat_data['strawberry'],
                                            client=client
                                            )
             keyboard = [
@@ -324,6 +378,9 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
+            # photo = open('birthday-cake-kosmos.jpg', 'rb')
+            photo = 'https://static.tildacdn.com/tild3666-3537-4438-a666-396237326335/-/resize/504x/logo_png.png'
+            context.bot.send_photo(chat_id=query.message.chat_id, photo=photo)
             text = 'Ваш заказ успешно оформлен'
             query.edit_message_text(
                 text=text,
@@ -476,6 +533,7 @@ class Command(BaseCommand):
                     CallbackQueryHandler(choose_topping, pattern='choose_base_cake_1'),
                     CallbackQueryHandler(choose_topping, pattern='choose_base_cake_2'),
                     CallbackQueryHandler(choose_topping, pattern='choose_base_cake_3'),
+                    CallbackQueryHandler(choose_topping, pattern='choose_base_cake_4'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'TOPPING_CHOICES':[
@@ -483,6 +541,10 @@ class Command(BaseCommand):
                     CallbackQueryHandler(add_blackberry, pattern='choose_topping_cake_1'),
                     CallbackQueryHandler(add_blackberry, pattern='choose_topping_cake_2'),
                     CallbackQueryHandler(add_blackberry, pattern='choose_topping_cake_3'),
+                    CallbackQueryHandler(add_blackberry, pattern='choose_topping_cake_4'),
+                    CallbackQueryHandler(add_blackberry, pattern='choose_topping_cake_5'),
+                    CallbackQueryHandler(add_blackberry, pattern='choose_topping_cake_6'),
+                    CallbackQueryHandler(add_blackberry, pattern='choose_topping_cake_0'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'BLACKBERRY_CHOICES':[
@@ -499,6 +561,12 @@ class Command(BaseCommand):
                 ],
                 'BLUEBERRY_CHOICES': [
                     CallbackQueryHandler(add_raspberry, pattern='add_raspberry'),
+                    CallbackQueryHandler(add_strawberry, pattern='blueberry_yes'),
+                    CallbackQueryHandler(add_strawberry, pattern='blueberry_no'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                ],
+                'STRAWBERRY_CHOICES': [
+                    CallbackQueryHandler(add_strawberry, pattern='add_strawberry'),
                     CallbackQueryHandler(check_order, pattern='blueberry_yes'),
                     CallbackQueryHandler(check_order, pattern='blueberry_no'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
