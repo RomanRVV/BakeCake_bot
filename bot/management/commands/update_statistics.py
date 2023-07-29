@@ -1,7 +1,5 @@
-from django.test import TestCase
 from bot.models import *
 import requests
-import argparse
 from urllib.parse import urlparse
 from BakeCake import settings
 from django.core.management.base import BaseCommand
