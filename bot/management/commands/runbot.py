@@ -1,10 +1,10 @@
 import datetime
-
 import telegram
+from bot.models import *
+from telegram import Update
 from django.core.management.base import BaseCommand
 from django.db.models import Q, Count
 from BakeCake import settings
-from bot.models import *
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -20,8 +20,18 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     ConversationHandler,
+    CallbackContext,
 )
+
 # from phonenumbers import is_valid_number, parse
+
+
+from phonenumbers import is_valid_number, parse
+import calendar
+from datetime import date, timedelta
+
+import logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 
 class Command(BaseCommand):
@@ -35,13 +45,11 @@ class Command(BaseCommand):
 
         def start_conversation(update, context):
             query = update.callback_query
-            chat_id = update.effective_chat.id
-            username = update.effective_chat.username
-            try:
-                Member.objects.get(chat_id=str(chat_id))
-            except Member.DoesNotExist:
-                Member.objects.create(chat_id=str(chat_id),
-                                      name=username)
+            user_first_name = update.effective_user.first_name
+            user_id = update.effective_user.id
+            context.user_data['user_first_name'] = user_first_name
+            context.user_data['user_id'] = user_id
+
             keyboard = [
                 [
                     InlineKeyboardButton("Заказать торт", callback_data='to_make_order'),
@@ -333,13 +341,14 @@ class Command(BaseCommand):
 
         def check_order(update, context):
             query = update.callback_query
-            if update.message.text:
+            if update.message:
                 question_text = update.message.text
                 context.chat_data['inscription'] = question_text
                 context.chat_data['inscription_price'] = 500
             total_price = context.chat_data['level_cake_price'] + context.chat_data['base_cake_price'] \
                     +context.chat_data['cake_shape_price']+context.chat_data['topping_price']\
                     +context.chat_data['berries_price']+context.chat_data['inscription_price']
+            context.chat_data['price'] = total_price
 
             keyboard = [
                 [
@@ -352,36 +361,46 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             text = f'Цена за ваш торт {total_price} руб.'
-            update.message.reply_text(text=text,
-                                      reply_markup=reply_markup,
-                                      parse_mode=ParseMode.HTML, )
+
+            if not update.message:
+                query.edit_message_text(
+                    text=text,
+                    reply_markup=reply_markup
+                )
+            else:
+                update.message.reply_text(text=text,
+                                          reply_markup=reply_markup,
+                                          parse_mode=ParseMode.HTML, )
 
             return 'CHECK_ORDER'
 
         def order(update, context):
             query = update.callback_query
             chat_id = update.effective_chat.id
-            client = Member.objects.get(chat_id=str(chat_id))
+
             CakeConstructor.objects.create(num_of_level=context.chat_data['level_cake'],
                                            base_of_cake=context.chat_data['base_cake'],
                                            topping=context.chat_data['topping'],
                                            berries=context.chat_data['berries'],
                                            inscription=context.chat_data['inscription'],
                                            cake_shape=context.chat_data['cake_shape'],
-                                           client=client
+                                           price=context.chat_data['price']
                                            )
             keyboard = [
                 [
 
-                    InlineKeyboardButton("На главную", callback_data="to_start"),
+                    InlineKeyboardButton("Выбрать дату", callback_data="choose_date"),
+                ],
+                [
+                    InlineKeyboardButton("На главную", callback_data="to_start")
                 ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
             # photo = open('birthday-cake-kosmos.jpg', 'rb')
-            photo = 'https://static.tildacdn.com/tild3666-3537-4438-a666-396237326335/-/resize/504x/logo_png.png'
-            context.bot.send_photo(chat_id=query.message.chat_id, photo=photo)
-            text = 'Ваш заказ успешно оформлен'
+            # photo = 'https://static.tildacdn.com/tild3666-3537-4438-a666-396237326335/-/resize/504x/logo_png.png'
+            # context.bot.send_photo(chat_id=query.message.chat_id, photo=photo)
+            text = 'Для продолжения оформления заказа выберите дату доставки'
             query.edit_message_text(
                 text=text,
                 reply_markup=reply_markup
@@ -412,58 +431,211 @@ class Command(BaseCommand):
                         parse_mode=ParseMode.HTML
                     )
 
+            buttons = [[InlineKeyboardButton(cake.name, callback_data=f"select_cake_{cake.id}")] for cake in cakes]
+            buttons.append([InlineKeyboardButton("Отмена", callback_data="cancel")])
 
-                keyboard = [[InlineKeyboardButton("Выбрать", callback_data=f"select_cake_{cake.id}")]]
+            reply_markup = InlineKeyboardMarkup(buttons)
 
-                reply_markup = InlineKeyboardMarkup(keyboard)
-
-                context.bot.send_message(
-                    chat_id=query.message.chat_id,
-                    text="Выберите торт:",
-                    reply_markup=reply_markup
-                )
+            query.message.reply_text(
+                text="Выберите торт для заказа:",
+                reply_markup=reply_markup
+            )
 
             return 'CHOOSE_CAKE'
 
-        def get_contact_info(update, context):
-            user_phone = update.message.text
-            selected_cake = context.user_data.get('selected_cake')
-
-            context.bot.send_message(
-                chat_id=update.message.chat_id,
-                text=f"Спасибо за ваш заказ!\n"
-                     f"Вы выбрали торт {selected_cake.name}.\n"
-                     f"Мы свяжемся с вами по номеру телефона: {user_phone}",
-            )
-
-            return 'END'
-
-        def select_cake(update, context):
+        def choose_delivery_date(update, context):
             query = update.callback_query
-            cake_id = int(query.data.split('_')[2])
+            query.answer()
+            cake_id = update.callback_query.data.split('_')[-1]
 
-            selected_cake = Cake.objects.get(id=cake_id)
+            try:
+                selected_cake = Cake.objects.get(id=cake_id)
+            except ValueError:
+
+                selected_cake = CakeConstructor.objects.get(num_of_level=context.chat_data['level_cake'],
+                                                            base_of_cake=context.chat_data['base_cake'],
+                                                            topping=context.chat_data['topping'],
+                                                            berries=context.chat_data['berries'],
+                                                            inscription=context.chat_data['inscription'],
+                                                            cake_shape=context.chat_data['cake_shape']
+                                                            )
 
             context.user_data['selected_cake'] = selected_cake
+            delivery_date = update.callback_query.data.split('_')[1]
 
-            context.bot.send_message(
-                chat_id=query.message.chat_id,
-                text=f"Вы выбрали торт {selected_cake.name}. Чтобы оформить заказ, пожалуйста, укажите свой номер телефона.",
+            context.user_data['delivery_date'] = delivery_date
+
+            price_cake = selected_cake.price
+            context.user_data['price_cake'] = price_cake
+            today = datetime.date.today()
+
+            current_week_start = today - datetime.timedelta(days=today.weekday())
+
+            buttons = []
+
+            for _ in range(4):
+                row = []
+                for day_offset in range(7):
+                    date = current_week_start + datetime.timedelta(days=day_offset)
+                    if date < today:
+                        row.append(InlineKeyboardButton(' ', callback_data='ignore'))
+                    else:
+                        date_str = date.strftime("%d.%m")
+                        row.append(InlineKeyboardButton(date_str, callback_data=f"date_{date}"))
+                buttons.append(row)
+                current_week_start += datetime.timedelta(days=7)
+
+            buttons.append([InlineKeyboardButton("Отмена", callback_data="cancel")])
+
+            reply_markup = InlineKeyboardMarkup(buttons)
+
+            query.edit_message_text(
+                text="Выберите дату доставки:",
+                reply_markup=reply_markup
+            )
+            return 'GET_DELIVERY_DATE'
+
+        def choose_delivery_time(update, context):
+            query = update.callback_query
+            query.answer()
+            delivery_date = update.callback_query.data.split('_')[1]
+            context.user_data['delivery_date'] = delivery_date
+            hours = ["10:00", "12:00", "14:00", "16:00", "18:00"]
+
+            buttons = []
+            for hour in hours:
+                buttons.append([InlineKeyboardButton(hour, callback_data=f"time_{hour}")])
+
+            buttons.append([InlineKeyboardButton("Отмена", callback_data="cancel")])
+
+            reply_markup = InlineKeyboardMarkup(buttons)
+
+            query.edit_message_text(
+                text="Выберите время доставки:",
+                reply_markup=reply_markup
             )
 
-            contact_handler = MessageHandler(Filters.text & ~Filters.command, get_contact_info)
-            context.dispatcher.add_handler(contact_handler)
+            return 'GET_DELIVERY_TIME'
 
-            return 'GET_CONTACT_INFO'
+        def get_contact_info(update, context):
+            query = update.callback_query
+            delivery_time = update.callback_query.data.split('_')[1]
+
+            context.user_data['delivery_time'] = delivery_time
+            selected_cake = context.user_data.get('selected_cake')
+            user_first_name = update.effective_user.first_name
+            context.user_data['username'] = user_first_name
+            user_id = update.effective_user.id
+            context.user_data['user_id'] = user_id
+            query.edit_message_text(
+                text=f"Привет, {user_first_name}! "
+                     f"Введите ваш номер телефона:",
+            )
+
+            return 'GET_PHONE_NUMBER'
+
+        def get_phone_number(update, context):
+            user_phone = update.message.text
+            context.user_data['phone'] = user_phone
+
+            update.message.reply_text(
+                "Введите адрес доставки:"
+            )
+
+            return 'GET_ADDRESS'
+
+        def get_address(update, context):
+            address = update.message.text
+            context.user_data['address'] = address
+
+            selected_cake = context.user_data.get('selected_cake')
+            delivery_date = context.user_data.get('delivery_date')
+            delivery_time = context.user_data.get('delivery_time')
+            phone = context.user_data.get('phone')
+            address = context.user_data.get('address')
+            try:
+                order = CakeOrder.objects.create(
+                    user_id=context.user_data['user_id'],
+                    user_name=context.user_data['username'],
+                    user_phone=phone,
+                    delivery_date=delivery_date,
+                    delivery_time=delivery_time,
+                    delivery_address=address,
+                    cake=selected_cake,
+                )
+            except ValueError:
+                order = CakeOrder.objects.create(
+                    user_id=context.user_data['user_id'],
+                    user_name=context.user_data['username'],
+                    user_phone=phone,
+                    delivery_date=delivery_date,
+                    delivery_time=delivery_time,
+                    delivery_address=address,
+                    designer_cake=selected_cake,
+                )
+
+            buttons = [
+                [InlineKeyboardButton('Оплатить онлайн', callback_data='pay')],
+                [InlineKeyboardButton('Отмена', callback_data='cancel')],
+            ]
+            reply_markup = InlineKeyboardMarkup(buttons)
+
+            update.message.reply_text(
+                f"Спасибо за ваш заказ!\n"
+                "Информация о Вашем торте:\n"
+                f"Цена {selected_cake.price}\n"
+                f"Дата доставки: {delivery_date}\n"
+                f"Время доставки: {delivery_time}\n"
+                f"Номер телефона: {phone}\n"
+                f"Адрес доставки: {address}\n\n"
+                f"Выберите действие:",
+                reply_markup=reply_markup,
+            )
+
+            return 'SEND_INVOICE'
+
+        def send_invoice(update, context):
+            selected_cake = context.user_data.get('selected_cake')
+            price_in_rubles = float(selected_cake.price)
+            amount_in_kopecks = int(price_in_rubles * 100)
+
+            token = '381764678:TEST:57788'
+            chat_id = update.effective_message.chat_id
+            context.user_data['invoice_sended'] = True
+
+            keyboard = [
+                [InlineKeyboardButton('Оплатить', pay=True)],
+                [InlineKeyboardButton('На главную', callback_data='to_start')],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            context.bot.send_invoice(
+                chat_id=chat_id,
+                title=selected_cake.name,
+                description='Цена торта',
+                payload='payload',
+                provider_token=token,
+                currency='RUB',
+                need_phone_number=False,
+                need_email=False,
+                is_flexible=False,
+                prices=[
+                    LabeledPrice(label='Цена торта', amount=amount_in_kopecks)
+                ],
+                start_parameter='test',
+            )
+            return 'SUCCESS_PAYMENT'
 
         def show_prices(update, _):
             query = update.callback_query
+            cakes = Cake.objects.all()
+            text = 'Цены на наши торты:\n'
+            for cake in cakes:
+                text += f"Название-{cake.name}: Цена в рублях-{cake.price}\n"
             keyboard = [
                 [InlineKeyboardButton("Назад", callback_data="make_order")],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
-            text = 'Цены на наши торты '
             query.edit_message_text(
                 text=text,
                 reply_markup=reply_markup
@@ -472,14 +644,30 @@ class Command(BaseCommand):
 
         def show_orders(update, context):
             query = update.callback_query
+            user_id = query.from_user.id
+
+            user_orders = CakeOrder.objects.filter(user_id=user_id)
+
+            if user_orders.exists():
+                text = "Ваши заказы:\n"
+                for order in user_orders:
+                    if order.cake:
+                        cake_name = order.cake.name
+                    else:
+                        cake_name = order.designer_cake.name
+                    text += f"Торт: {cake_name}\n"
+                    text += f"Дата доставки: {order.delivery_date}\n"
+                    text += f"Время доставки: {order.delivery_time}\n"
+                    text += f"Номер телефона: {order.user_phone}\n"
+                    text += f"Адрес доставки: {order.delivery_address}\n\n"
+            else:
+                text = "У вас пока нет заказов."
+
             keyboard = [
-                [
-                    InlineKeyboardButton("На главный", callback_data="to_start"),
-                ]
+                [InlineKeyboardButton("На главный", callback_data="to_start")],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
-            text = 'Последнине записи: \n'
             query.edit_message_text(
                 text=text, reply_markup=reply_markup
             )
@@ -535,7 +723,7 @@ class Command(BaseCommand):
                     CallbackQueryHandler(choose_base_cake, pattern='choose_shape_cake_3'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
-                'CAKE_BASE_CHOICES':[
+                'CAKE_BASE_CHOICES': [
                     CallbackQueryHandler(choose_shape_cake, pattern='choose_shape_cake'),
                     CallbackQueryHandler(choose_topping, pattern='choose_base_cake_1'),
                     CallbackQueryHandler(choose_topping, pattern='choose_base_cake_2'),
@@ -543,7 +731,7 @@ class Command(BaseCommand):
                     CallbackQueryHandler(choose_topping, pattern='choose_base_cake_4'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
-                'TOPPING_CHOICES':[
+                'TOPPING_CHOICES': [
                     CallbackQueryHandler(choose_base_cake, pattern='choose_base_cake'),
                     CallbackQueryHandler(add_berries, pattern='choose_topping_cake_1'),
                     CallbackQueryHandler(add_berries, pattern='choose_topping_cake_2'),
@@ -554,7 +742,7 @@ class Command(BaseCommand):
                     CallbackQueryHandler(add_berries, pattern='choose_topping_cake_0'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
-                'BERRIES_CHOICES':[
+                'BERRIES_CHOICES': [
                     CallbackQueryHandler(choose_topping, pattern='choose_topping'),
                     CallbackQueryHandler(add_inscription, pattern='choose_berries_1'),
                     CallbackQueryHandler(add_inscription, pattern='choose_berries_2'),
@@ -563,13 +751,13 @@ class Command(BaseCommand):
                     CallbackQueryHandler(add_inscription, pattern='choose_berries_0'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
-                'INSCRIPTION_CHOICES':[
+                'INSCRIPTION_CHOICES': [
                     CallbackQueryHandler(add_berries, pattern='add_berries'),
                     CallbackQueryHandler(get_inscription, pattern='inscription_yes'),
                     CallbackQueryHandler(check_order, pattern='inscription_no'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
-                'GET_INSCRIPTION':[
+                'GET_INSCRIPTION': [
                     CallbackQueryHandler(add_inscription, pattern='add_inscription'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     MessageHandler(Filters.text & ~Filters.command, check_order),
@@ -580,10 +768,28 @@ class Command(BaseCommand):
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'ORDER': [
-                    CallbackQueryHandler(start_conversation, pattern='to_start')
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                    CallbackQueryHandler(choose_delivery_date, pattern='choose_date')
                 ],
                 'CHOOSE_CAKE': [
-                    CallbackQueryHandler(select_cake, pattern=r'select_cake_\d+'),
+                    CallbackQueryHandler(choose_delivery_date, pattern=r'select_cake_\d+'),
+                ],
+                'GET_DELIVERY_DATE': [
+                    CallbackQueryHandler(choose_delivery_time, pattern=r'^date_'),
+                    CallbackQueryHandler(choose_cake, pattern='cancel'),
+                ],
+                'GET_DELIVERY_TIME': [
+                    CallbackQueryHandler(get_contact_info, pattern=r'^time_'),
+                    CallbackQueryHandler(choose_cake, pattern='cancel'),
+                ],
+                'GET_CONTACT_INFO': [
+                    MessageHandler(Filters.text & ~Filters.command, get_contact_info),
+                ],
+                'GET_PHONE_NUMBER': [
+                    MessageHandler(Filters.text & ~Filters.command, get_phone_number),
+                ],
+                'GET_ADDRESS': [
+                    MessageHandler(Filters.text & ~Filters.command, get_address),
                 ],
                 'CALL_SALON': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
@@ -596,6 +802,12 @@ class Command(BaseCommand):
                 'COMMON_INFO': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
+                'SEND_INVOICE': [
+                    CallbackQueryHandler(send_invoice, pattern='pay'),
+                    CallbackQueryHandler(choose_cake, pattern='cancel'),
+
+                ],
+
 
 
             },
