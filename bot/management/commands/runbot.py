@@ -559,8 +559,15 @@ class Command(BaseCommand):
             hours = ["10:00", "12:00", "14:00", "16:00", "18:00"]
 
             buttons = []
+            current_time = datetime.datetime.now().strftime('%H:%M')
             for hour in hours:
+                if delivery_date == datetime.datetime.now().strftime('%Y-%m-%d') and hour <= current_time:
+                    continue
                 buttons.append([InlineKeyboardButton(hour, callback_data=f"time_{hour}")])
+
+            if not buttons:
+                next_day = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+                buttons.append([InlineKeyboardButton(f"На {next_day}", callback_data=f"time_{next_day}")])
 
             buttons.append([InlineKeyboardButton("Отмена", callback_data="cancel")])
 
@@ -609,6 +616,12 @@ class Command(BaseCommand):
             delivery_time = context.user_data.get('delivery_time')
             phone = context.user_data.get('phone')
             address = context.user_data.get('address')
+
+            delivery_datetime = datetime.datetime.strptime(delivery_date, "%Y-%m-%d")
+            now = datetime.datetime.now()
+            if delivery_datetime <= now + datetime.timedelta(hours=24):
+                selected_cake.price *= 0.8
+
             try:
                 order = CakeOrder.objects.create(
                     user_id=context.user_data['user_id'],
