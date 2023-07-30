@@ -64,7 +64,7 @@ class CakeConstructor(models.Model):
     inscription = models.CharField(max_length=200,
                                    blank=True,
                                    verbose_name='Надпись на торте')
-    price = models.IntegerField(verbose_name='Цена')
+    price = models.IntegerField(verbose_name='Цена за торт')
 
 
 class LinkStatistics(models.Model):
@@ -101,4 +101,7 @@ class CakeOrder(models.Model):
     delivery_address = models.CharField(max_length=200, null=True)
     cake = models.ForeignKey(null=True, on_delete=models.SET_NULL, to='bot.Cake')
     designer_cake = models.ForeignKey(null=True, on_delete=models.CASCADE, to='bot.CakeConstructor')
-
+    order_price = models.IntegerField(verbose_name='Цена за заказ')
+    inscription = models.CharField(max_length=200,
+                                   blank=True,
+                                   verbose_name='Надпись на торте')

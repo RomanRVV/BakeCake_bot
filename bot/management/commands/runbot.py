@@ -280,6 +280,7 @@ class Command(BaseCommand):
 
         def add_inscription(update, context):
             query = update.callback_query
+            context.chat_data['cake_id'] = ''
             if query.data == 'choose_berries_1':
                 context.chat_data['berries'] = 'blackberry'
                 context.chat_data['berries_price'] = 400
@@ -376,8 +377,6 @@ class Command(BaseCommand):
 
         def order(update, context):
             query = update.callback_query
-            chat_id = update.effective_chat.id
-
             CakeConstructor.objects.create(num_of_level=context.chat_data['level_cake'],
                                            base_of_cake=context.chat_data['base_cake'],
                                            topping=context.chat_data['topping'],
@@ -397,9 +396,6 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
-            # photo = open('birthday-cake-kosmos.jpg', 'rb')
-            # photo = 'https://static.tildacdn.com/tild3666-3537-4438-a666-396237326335/-/resize/504x/logo_png.png'
-            # context.bot.send_photo(chat_id=query.message.chat_id, photo=photo)
             text = 'Для продолжения оформления заказа выберите дату доставки'
             query.edit_message_text(
                 text=text,
@@ -443,11 +439,57 @@ class Command(BaseCommand):
 
             return 'CHOOSE_CAKE'
 
+        def add_inscription_for_prepared_cakes(update, context):
+            query = update.callback_query
+            context.chat_data['cake_id'] = update.callback_query.data.split('_')[-1]
+            context.chat_data['inscription'] = ''
+            context.chat_data['inscription_price'] = 0
+            keyboard = [
+                [
+                    InlineKeyboardButton("Да", callback_data="inscription_yes"),
+                ],
+                [
+                    InlineKeyboardButton("Нет", callback_data="inscription_no"),
+                ],
+                [
+                    InlineKeyboardButton("На главную", callback_data="to_start"),
+                ],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.answer()
+            text = f'Вы хотите добавить надпись к торту?\nЦена торта увеличится на 500 рублей.'
+            query.edit_message_text(
+                text=text,
+                reply_markup=reply_markup
+            )
+
+            return 'INSCRIPTION_CHOICES_FOR_PREPARED_CAKES'
+
+        def get_inscription_for_prepared_cakes(update, _):
+            query = update.callback_query
+            keyboard = [
+                [
+                    InlineKeyboardButton("Назад", callback_data="add_inscription"),
+                    InlineKeyboardButton("На главную", callback_data="to_start"),
+                ],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.answer()
+            text = 'Напишите надпись, которая должна появиться на торте'
+            query.edit_message_text(
+                text=text,
+                reply_markup=reply_markup
+            )
+            return 'GET_INSCRIPTION_FOR_PREPARED_CAKES'
+
         def choose_delivery_date(update, context):
             query = update.callback_query
-            query.answer()
-            cake_id = update.callback_query.data.split('_')[-1]
-
+            # query.answer()
+            cake_id = context.chat_data['cake_id']
+            if update.message:
+                question_text = update.message.text
+                context.chat_data['inscription'] = question_text
+                context.chat_data['inscription_price'] = 500
             try:
                 selected_cake = Cake.objects.get(id=cake_id)
             except ValueError:
@@ -461,9 +503,9 @@ class Command(BaseCommand):
                                                             )
 
             context.user_data['selected_cake'] = selected_cake
-            delivery_date = update.callback_query.data.split('_')[1]
-
-            context.user_data['delivery_date'] = delivery_date
+            # delivery_date = update.callback_query.data.split('_')[1]
+            #
+            # context.user_data['delivery_date'] = delivery_date
 
             price_cake = selected_cake.price
             context.user_data['price_cake'] = price_cake
@@ -486,13 +528,18 @@ class Command(BaseCommand):
                 current_week_start += datetime.timedelta(days=7)
 
             buttons.append([InlineKeyboardButton("Отмена", callback_data="cancel")])
-
+            text = "Выберите дату доставки:"
             reply_markup = InlineKeyboardMarkup(buttons)
+            if not update.message:
+                query.edit_message_text(
+                    text=text,
+                    reply_markup=reply_markup
+                )
+            else:
+                update.message.reply_text(text=text,
+                                          reply_markup=reply_markup,
+                                          parse_mode=ParseMode.HTML, )
 
-            query.edit_message_text(
-                text="Выберите дату доставки:",
-                reply_markup=reply_markup
-            )
             return 'GET_DELIVERY_DATE'
 
         def choose_delivery_time(update, context):
@@ -562,6 +609,8 @@ class Command(BaseCommand):
                     delivery_time=delivery_time,
                     delivery_address=address,
                     cake=selected_cake,
+                    order_price=selected_cake.price+context.chat_data['inscription_price'],
+                    inscription=context.chat_data['inscription']
                 )
             except ValueError:
                 order = CakeOrder.objects.create(
@@ -572,6 +621,8 @@ class Command(BaseCommand):
                     delivery_time=delivery_time,
                     delivery_address=address,
                     designer_cake=selected_cake,
+                    order_price=context.chat_data['price'],
+                    inscription=context.chat_data['inscription']
                 )
 
             buttons = [
@@ -583,7 +634,7 @@ class Command(BaseCommand):
             update.message.reply_text(
                 f"Спасибо за ваш заказ!\n"
                 "Информация о Вашем торте:\n"
-                f"Цена {selected_cake.price}\n"
+                f"Цена {order.order_price}\n"
                 f"Дата доставки: {delivery_date}\n"
                 f"Время доставки: {delivery_time}\n"
                 f"Номер телефона: {phone}\n"
@@ -656,6 +707,7 @@ class Command(BaseCommand):
                     else:
                         cake_name = order.designer_cake.name
                     text += f"Торт: {cake_name}\n"
+                    text += f"Цена заказа: {order.order_price}\n"
                     text += f"Дата доставки: {order.delivery_date}\n"
                     text += f"Время доставки: {order.delivery_time}\n"
                     text += f"Номер телефона: {order.user_phone}\n"
@@ -772,7 +824,17 @@ class Command(BaseCommand):
                     CallbackQueryHandler(choose_delivery_date, pattern='choose_date')
                 ],
                 'CHOOSE_CAKE': [
-                    CallbackQueryHandler(choose_delivery_date, pattern=r'select_cake_\d+'),
+                    CallbackQueryHandler(add_inscription_for_prepared_cakes, pattern=r'select_cake_\d+'),
+                ],
+                'INSCRIPTION_CHOICES_FOR_PREPARED_CAKES':[
+                    CallbackQueryHandler(get_inscription_for_prepared_cakes, pattern='inscription_yes'),
+                    CallbackQueryHandler(choose_delivery_date, pattern='inscription_no'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                ],
+                'GET_INSCRIPTION_FOR_PREPARED_CAKES': [
+                    CallbackQueryHandler(add_inscription_for_prepared_cakes, pattern='add_inscription'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                    MessageHandler(Filters.text & ~Filters.command, choose_delivery_date),
                 ],
                 'GET_DELIVERY_DATE': [
                     CallbackQueryHandler(choose_delivery_time, pattern=r'^date_'),
