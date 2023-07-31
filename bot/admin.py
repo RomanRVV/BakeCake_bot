@@ -4,7 +4,8 @@ from .models import *
 
 @admin.register(Cake)
 class CakeAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('name',
+                       'price')
 
 
 @admin.register(CakeConstructor)
@@ -14,7 +15,10 @@ class CakeConstructorAdmin(admin.ModelAdmin):
 
 @admin.register(CakeOrder)
 class CakeOrderAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('user_name',
+                    'user_phone',
+                    'cake',
+                    'designer_cake',)
 
 
 @admin.register(LinkStatistics)

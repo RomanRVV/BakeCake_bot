@@ -1,5 +1,5 @@
 import requests
-from BakeCake.settings import bitly_token
+# from BakeCake.settings import bitly_token
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -10,6 +10,8 @@ class Cake(models.Model):
     price = models.IntegerField()
     image = models.ImageField(upload_to='cakes/')
 
+    def __str__(self):
+        return self.name
 
 class CakeConstructor(models.Model):
     CAKE_BASE_CHOICES = [
@@ -66,6 +68,8 @@ class CakeConstructor(models.Model):
                                    verbose_name='Надпись на торте')
     price = models.IntegerField(verbose_name='Цена за торт')
 
+    def __str__(self):
+        return self.name
 
 class LinkStatistics(models.Model):
     def save(self, *args, **kwargs):
@@ -96,6 +100,7 @@ class CakeOrder(models.Model):
     user_id = models.CharField(max_length=100, null=True)
     user_name = models.CharField(max_length=100, null=True)
     user_phone = models.CharField(max_length=20, null=True)
+    user_consent = models.BooleanField(default=False, verbose_name='Согласие на обработку персональных данных')
     delivery_date = models.DateField(null=True)
     delivery_time = models.TimeField(null=True)
     delivery_address = models.CharField(max_length=200, null=True)
