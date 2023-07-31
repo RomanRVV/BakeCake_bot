@@ -1,5 +1,5 @@
 import requests
-# from BakeCake.settings import bitly_token
+from BakeCake.settings import bitly_token
 from django.db import models
 from django.contrib.auth.models import User
 
