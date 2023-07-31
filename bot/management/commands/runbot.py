@@ -26,7 +26,7 @@ from telegram.ext import (
 # from phonenumbers import is_valid_number, parse
 
 
-from phonenumbers import is_valid_number, parse
+# from phonenumbers import is_valid_number, parse
 import calendar
 from datetime import date, timedelta
 
@@ -63,7 +63,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.effective_message.reply_text(
-                text=f"Описание компании",
+                text=f"""Бот делает торт""",
                 reply_markup=reply_markup,
                 parse_mode=ParseMode.HTML)
             return 'GREETINGS'
@@ -756,8 +756,17 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
+            text = """
+            Магазин тортов на заказ.
+            Сделаем ваш праздник еще чуточку слаще чем он должен быть.
+В нашем магазине вы можете собрать торт на ваш вкус и выбрать ему форму и добавить начинку и топпинги. 
+Все как пожелает ваша душа сегодня.
+Выбирайте удобную дату и время доставки и все это можно оплатить онлайн через бота.          
+Спасибо, что вы с нами.
+            """
             query.edit_message_text(
-                text="Информация о пекарне, что делаем и т.д", reply_markup=reply_markup
+                text=text, 
+                reply_markup=reply_markup
             )
             return 'COMMON_INFO'
 
