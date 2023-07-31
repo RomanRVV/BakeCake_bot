@@ -104,10 +104,12 @@ class Command(BaseCommand):
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
             text = 'Выбор уровней'
-            query.edit_message_text(
-                text=text,
-                reply_markup=reply_markup
+            update.effective_message.reply_photo(
+                photo=open('media/level_cake.jpg', 'rb'),
+                caption=text, reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML
             )
+
             return 'LEVEL_CAKE'
 
         def choose_shape_cake(update, context):
@@ -136,10 +138,10 @@ class Command(BaseCommand):
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
             text = f'Выбор формы\nЦена торта-{price}руб.'
-            query.edit_message_text(
-                text=text,
-                reply_markup=reply_markup
-            )
+            img_with_text = InputMediaPhoto(media=open('media/cake_shape.jpg', 'rb'), caption=text)
+            query.edit_message_media(media=img_with_text,
+                                     reply_markup=reply_markup)
+
             return 'CAKE_SHAPE_CHOICES'
 
         def choose_base_cake(update, context):
@@ -171,10 +173,10 @@ class Command(BaseCommand):
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
             text = f'Выбор основы\nЦена торта-{price}руб.'
-            query.edit_message_text(
-                text=text,
-                reply_markup=reply_markup
-            )
+            img_with_text = InputMediaPhoto(media=open('media/cake_base.jpg', 'rb'), caption=text)
+            query.edit_message_media(media=img_with_text,
+                                     reply_markup=reply_markup)
+
             return 'CAKE_BASE_CHOICES'
 
         def choose_topping(update, context):
@@ -219,11 +221,10 @@ class Command(BaseCommand):
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
             text = f'Выбор топпинга\nЦена торта-{price}руб.'
-            query.edit_message_text(
-                text=text,
-                reply_markup=reply_markup
-            )
-            
+            img_with_text = InputMediaPhoto(media=open('media/topping.jpg', 'rb'), caption=text)
+            query.edit_message_media(media=img_with_text,
+                                     reply_markup=reply_markup)
+
             return 'TOPPING_CHOICES'
 
         def add_berries(update, context):
@@ -271,10 +272,9 @@ class Command(BaseCommand):
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
             text = f'Выберите ягоды\nЦена торта-{price}руб.'
-            query.edit_message_text(
-                text=text,
-                reply_markup=reply_markup
-            )
+            img_with_text = InputMediaPhoto(media=open('media/berries.png', 'rb'), caption=text)
+            query.edit_message_media(media=img_with_text,
+                                     reply_markup=reply_markup)
 
             return 'BERRIES_CHOICES'
 
@@ -316,10 +316,19 @@ class Command(BaseCommand):
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
             text = f'Вы хотите добавить надпись к торту?\nЦена торта-{price}руб.'
-            query.edit_message_text(
-                text=text,
-                reply_markup=reply_markup
-            )
+            img_with_text = InputMediaPhoto(media=open('media/cake_inscription.jpg', 'rb'), caption=text)
+            try:
+                query.edit_message_media(media=img_with_text,
+                                         reply_markup=reply_markup)
+
+            except telegram.error.BadRequest:
+                update.effective_message.reply_photo(
+                    photo=open('media/cake_inscription.jpg', 'rb'),
+                    caption=text, reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML
+                )
+
+
 
             return 'INSCRIPTION_CHOICES'
 
@@ -334,7 +343,7 @@ class Command(BaseCommand):
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
             text = 'Напишите надпись, которая должна появиться на торте'
-            query.edit_message_text(
+            query.message.reply_text(
                 text=text,
                 reply_markup=reply_markup
             )
@@ -364,7 +373,7 @@ class Command(BaseCommand):
             text = f'Цена за ваш торт {total_price} руб.'
 
             if not update.message:
-                query.edit_message_text(
+                query.message.reply_text(
                     text=text,
                     reply_markup=reply_markup
                 )
