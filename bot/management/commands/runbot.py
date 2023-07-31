@@ -420,7 +420,7 @@ class Command(BaseCommand):
             for cake in cakes:
                 message = f"<b>{cake.name}</b>\n"
                 message += f"{cake.description}\n"
-                message += f"Цена: ${cake.price}\n"
+                message += f"Цена: {cake.price}\n"
 
                 if cake.image:
                     context.bot.send_photo(
@@ -437,7 +437,7 @@ class Command(BaseCommand):
                     )
 
             buttons = [[InlineKeyboardButton(cake.name, callback_data=f"select_cake_{cake.id}")] for cake in cakes]
-            buttons.append([InlineKeyboardButton("Отмена", callback_data="cancel")])
+            buttons.append([InlineKeyboardButton("Назад", callback_data="make_order")])
 
             reply_markup = InlineKeyboardMarkup(buttons)
 
@@ -493,7 +493,7 @@ class Command(BaseCommand):
 
         def choose_delivery_date(update, context):
             query = update.callback_query
-            # query.answer()
+
             cake_id = context.chat_data['cake_id']
             if update.message:
                 question_text = update.message.text
@@ -512,9 +512,6 @@ class Command(BaseCommand):
                                                             )
 
             context.user_data['selected_cake'] = selected_cake
-            # delivery_date = update.callback_query.data.split('_')[1]
-            #
-            # context.user_data['delivery_date'] = delivery_date
 
             price_cake = selected_cake.price
             context.user_data['price_cake'] = price_cake
@@ -580,12 +577,35 @@ class Command(BaseCommand):
 
             return 'GET_DELIVERY_TIME'
 
+        def ask_for_consent(update, context):
+            query = update.callback_query
+            query.answer()
+            delivery_time = update.callback_query.data.split('_')[1]
+            context.user_data['delivery_time'] = delivery_time
+            user_consent = context.user_data.get('user_consent', False)
+            if user_consent:
+                return handle_consent(update, context, consent_given=True)
+            else:
+                keyboard = [
+                    [
+                        InlineKeyboardButton("Да, согласен/согласна", callback_data="consent_yes"),
+                    ],
+                    [
+                        InlineKeyboardButton("Нет, не согласен/согласна", callback_data="consent_no"),
+                    ],
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                query.edit_message_text(
+                    text="Вы готовы предоставить персональные данные для заказа?",
+                    reply_markup=reply_markup,
+                )
+
+            return 'ASK_FOR_CONSENT'
+
+
         def get_contact_info(update, context):
             query = update.callback_query
-            delivery_time = update.callback_query.data.split('_')[1]
-
-            context.user_data['delivery_time'] = delivery_time
-            selected_cake = context.user_data.get('selected_cake')
             user_first_name = update.effective_user.first_name
             context.user_data['username'] = user_first_name
             user_id = update.effective_user.id
@@ -632,7 +652,8 @@ class Command(BaseCommand):
                     delivery_address=address,
                     cake=selected_cake,
                     order_price=selected_cake.price+context.chat_data['inscription_price'],
-                    inscription=context.chat_data['inscription']
+                    inscription=context.chat_data['inscription'],
+                    user_consent = True
                 )
             except ValueError:
                 order = CakeOrder.objects.create(
@@ -643,8 +664,9 @@ class Command(BaseCommand):
                     delivery_time=delivery_time,
                     delivery_address=address,
                     designer_cake=selected_cake,
-                    order_price=context.chat_data['price'],
-                    inscription=context.chat_data['inscription']
+                    order_price=selected_cake.price+context.chat_data['inscription_price'],
+                    inscription=context.chat_data['inscription'],
+                    user_consent=True
                 )
 
             buttons = [
@@ -701,7 +723,7 @@ class Command(BaseCommand):
         def show_prices(update, _):
             query = update.callback_query
             cakes = Cake.objects.all()
-            text = 'Цены на наши торты:\n'
+            text = 'Цены на готовые наши торты:\n'
             for cake in cakes:
                 text += f"Название-{cake.name}: Цена в рублях-{cake.price}\n"
             keyboard = [
@@ -758,7 +780,7 @@ class Command(BaseCommand):
             query.answer()
             text = """
             Магазин тортов на заказ.
-            Сделаем ваш праздник еще чуточку слаще чем он должен быть.
+Сделаем ваш праздник еще чуточку слаще чем он должен быть.
 В нашем магазине вы можете собрать торт на ваш вкус и выбрать ему форму и добавить начинку и топпинги. 
 Все как пожелает ваша душа сегодня.
 Выбирайте удобную дату и время доставки и все это можно оплатить онлайн через бота.          
@@ -807,7 +829,7 @@ class Command(BaseCommand):
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'CAKE_BASE_CHOICES': [
-                    CallbackQueryHandler(choose_shape_cake, pattern='choose_shape_cake'),
+                    CallbackQueryHandler(choose_shape_cake, pattern='choose_level_cake'),
                     CallbackQueryHandler(choose_topping, pattern='choose_base_cake_1'),
                     CallbackQueryHandler(choose_topping, pattern='choose_base_cake_2'),
                     CallbackQueryHandler(choose_topping, pattern='choose_base_cake_3'),
@@ -856,6 +878,7 @@ class Command(BaseCommand):
                 ],
                 'CHOOSE_CAKE': [
                     CallbackQueryHandler(add_inscription_for_prepared_cakes, pattern=r'select_cake_\d+'),
+                    CallbackQueryHandler(make_order, pattern='make_order')
                 ],
                 'INSCRIPTION_CHOICES_FOR_PREPARED_CAKES':[
                     CallbackQueryHandler(get_inscription_for_prepared_cakes, pattern='inscription_yes'),
@@ -869,11 +892,15 @@ class Command(BaseCommand):
                 ],
                 'GET_DELIVERY_DATE': [
                     CallbackQueryHandler(choose_delivery_time, pattern=r'^date_'),
-                    CallbackQueryHandler(choose_cake, pattern='cancel'),
+                    CallbackQueryHandler(start_conversation, pattern='cancel'),
                 ],
                 'GET_DELIVERY_TIME': [
-                    CallbackQueryHandler(get_contact_info, pattern=r'^time_'),
-                    CallbackQueryHandler(choose_cake, pattern='cancel'),
+                    CallbackQueryHandler(ask_for_consent, pattern=r'^time_'),
+                    CallbackQueryHandler(start_conversation, pattern='cancel'),
+                ],
+                'ASK_FOR_CONSENT': [
+                    CallbackQueryHandler(get_contact_info, pattern='consent_yes'),
+                    CallbackQueryHandler(start_conversation, pattern='consent_no'),
                 ],
                 'GET_CONTACT_INFO': [
                     MessageHandler(Filters.text & ~Filters.command, get_contact_info),

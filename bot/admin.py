@@ -4,7 +4,8 @@ from .models import *
 
 @admin.register(Cake)
 class CakeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price')
+     list_display = ('name', 'price')
+
 
 
 @admin.register(CakeConstructor)
@@ -20,8 +21,9 @@ class CakeConstructorAdmin(admin.ModelAdmin):
 @admin.register(CakeOrder)
 class CakeOrderAdmin(admin.ModelAdmin):
     list_display = ('user_name',
-                    'delivery_date',
-                    'delivery_time',
+                    'user_phone',
+                    'cake',
+                    'designer_cake',
                     'order_price')
 
 
