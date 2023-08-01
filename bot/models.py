@@ -112,3 +112,4 @@ class CakeOrder(models.Model):
     inscription = models.CharField(max_length=200,
                                    blank=True,
                                    verbose_name='Надпись на торте')
+    
