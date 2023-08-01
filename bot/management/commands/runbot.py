@@ -761,7 +761,7 @@ class Command(BaseCommand):
             text = 'Цены на готовые наши торты:\n'
             for cake in cakes:
                 text += f"Название-{cake.name}: Цена в рублях-{cake.price}\n"
-
+            text += f"Добавить надпись на торт - 500р"
             keyboard = [
                 [InlineKeyboardButton("Назад", callback_data="make_order")],
             ]
