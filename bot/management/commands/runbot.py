@@ -39,7 +39,6 @@ class Command(BaseCommand):
     help = 'Телеграм-бот'
 
     def handle(self, *args, **kwargs):
-        # tg_token = settings.TOKEN
         tg_token = settings.tg_token
         updater = Updater(token=tg_token, use_context=True)
         dispatcher = updater.dispatcher
@@ -594,6 +593,10 @@ class Command(BaseCommand):
                     [
                         InlineKeyboardButton("Нет, не согласен/согласна", callback_data="consent_no"),
                     ],
+                    [
+                        InlineKeyboardButton("Перейти к правовому документу",
+                                             url="http://pravo.gov.ru/proxy/ips/?docbody&nd=102108261"),
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -695,7 +698,7 @@ class Command(BaseCommand):
             selected_order = context.user_data.get('order')
             price_in_rubles = float(selected_order.order_price)
             amount_in_kopecks = int(price_in_rubles * 100)
-            token = settings.payments_token
+            token_pay = settings.token_pay
             chat_id = update.effective_message.chat_id
             context.user_data['invoice_sent'] = True
 
@@ -709,7 +712,7 @@ class Command(BaseCommand):
                 title=selected_cake.name,
                 description='Цена торта',
                 payload='payload',
-                provider_token=token,
+                provider_token=token_pay,
                 currency='RUB',
                 need_phone_number=False,
                 need_email=False,
@@ -758,6 +761,7 @@ class Command(BaseCommand):
             text = 'Цены на готовые наши торты:\n'
             for cake in cakes:
                 text += f"Название-{cake.name}: Цена в рублях-{cake.price}\n"
+            text += f"Добавить надпись на торт - 500р"
             keyboard = [
                 [InlineKeyboardButton("Назад", callback_data="make_order")],
             ]
@@ -799,7 +803,7 @@ class Command(BaseCommand):
             query.edit_message_text(
                 text=text, reply_markup=reply_markup
             )
-            return 'SHOW_ANSWER'
+            return 'GREETINGS'
 
         def show_common_info(update, context):
             query = update.callback_query
