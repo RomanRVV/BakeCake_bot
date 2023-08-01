@@ -21,6 +21,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
     CallbackContext,
+    PreCheckoutQueryHandler,
 )
 
 # from phonenumbers import is_valid_number, parse
@@ -622,7 +623,7 @@ class Command(BaseCommand):
             context.user_data['phone'] = user_phone
 
             update.message.reply_text(
-                "Введите адрес доставки:"
+                "Введите адрес доставки: (Улица,дом/квартира)"
             )
 
             return 'GET_ADDRESS'
@@ -694,9 +695,9 @@ class Command(BaseCommand):
             price_in_rubles = float(selected_cake.price)
             amount_in_kopecks = int(price_in_rubles * 100)
 
-            token = '381764678:TEST:57788'
+            token = '1744374395:TEST:2a0fb65e088562e55a90'
             chat_id = update.effective_message.chat_id
-            context.user_data['invoice_sended'] = True
+            context.user_data['invoice_sent'] = True
 
             keyboard = [
                 [InlineKeyboardButton('Оплатить', pay=True)],
@@ -716,8 +717,39 @@ class Command(BaseCommand):
                 prices=[
                     LabeledPrice(label='Цена торта', amount=amount_in_kopecks)
                 ],
+                reply_markup=reply_markup,
                 start_parameter='test',
             )
+            return 'SUCCESS_PAYMENT'
+
+        def process_pre_checkout_query(update, context):
+            query = update.pre_checkout_query
+            try:
+                pass
+            except:
+                context.bot.answer_pre_checkout_query(
+                    pre_checkout_query_id=query.id,
+                    ok=False,
+                    error_message="Что-то пошло не так...",
+                )
+            else:
+                context.bot.answer_pre_checkout_query(query.id, ok=True)
+
+
+        def success_payment(update, context):
+            '''Обработка успешной оплаты'''
+            amount = update.message.successful_payment.total_amount / 100
+            text = f'✅ Спасибо за оплату {amount} руб.!\n\n'
+            keyboard = [
+                [InlineKeyboardButton("На главную", callback_data="to_start")],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            update.message.reply_text(
+                text=text,
+                reply_markup=reply_markup,
+                parse_mode=telegram.ParseMode.HTML,
+            )
+
             return 'SUCCESS_PAYMENT'
 
         def show_prices(update, _):
@@ -787,7 +819,7 @@ class Command(BaseCommand):
 Спасибо, что вы с нами.
             """
             query.edit_message_text(
-                text=text, 
+                text=text,
                 reply_markup=reply_markup
             )
             return 'COMMON_INFO'
@@ -800,6 +832,13 @@ class Command(BaseCommand):
             )
             return ConversationHandler.END
 
+
+
+        pre_checkout_handler = PreCheckoutQueryHandler(process_pre_checkout_query)
+        success_payment_handler = MessageHandler(Filters.successful_payment,
+                                                 success_payment)
+        dispatcher.add_handler(pre_checkout_handler)
+        dispatcher.add_handler(success_payment_handler)
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler('start', start_conversation)],
             states={
@@ -924,8 +963,17 @@ class Command(BaseCommand):
                 ],
                 'SEND_INVOICE': [
                     CallbackQueryHandler(send_invoice, pattern='pay'),
-                    CallbackQueryHandler(choose_cake, pattern='cancel'),
+                    CallbackQueryHandler(make_order, pattern='cancel'),
 
+                ],
+                'PROCESS_PRE_CHECKOUT': [
+                    PreCheckoutQueryHandler(process_pre_checkout_query),
+                    CallbackQueryHandler(success_payment,
+                                         pattern='success_payment'),
+                ],
+                'SUCCESS_PAYMENT': [
+                    CallbackQueryHandler(start_conversation,
+                                         pattern='to_start'),
                 ],
 
 
