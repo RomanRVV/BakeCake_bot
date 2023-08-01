@@ -675,7 +675,7 @@ class Command(BaseCommand):
                 [InlineKeyboardButton('Отмена', callback_data='cancel')],
             ]
             reply_markup = InlineKeyboardMarkup(buttons)
-
+            context.user_data['order'] = order
             update.message.reply_text(
                 f"Спасибо за ваш заказ!\n"
                 "Информация о Вашем торте:\n"
@@ -692,10 +692,10 @@ class Command(BaseCommand):
 
         def send_invoice(update, context):
             selected_cake = context.user_data.get('selected_cake')
-            price_in_rubles = float(selected_cake.price)
+            selected_order = context.user_data.get('order')
+            price_in_rubles = float(selected_order.order_price)
             amount_in_kopecks = int(price_in_rubles * 100)
-
-            token = '1744374395:TEST:2a0fb65e088562e55a90'
+            token = settings.payments_token
             chat_id = update.effective_message.chat_id
             context.user_data['invoice_sent'] = True
 
