@@ -593,6 +593,10 @@ class Command(BaseCommand):
                     [
                         InlineKeyboardButton("Нет, не согласен/согласна", callback_data="consent_no"),
                     ],
+                    [
+                        InlineKeyboardButton("Перейти к правовому документу",
+                                             url="http://pravo.gov.ru/proxy/ips/?docbody&nd=102108261"),
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -757,6 +761,7 @@ class Command(BaseCommand):
             text = 'Цены на готовые наши торты:\n'
             for cake in cakes:
                 text += f"Название-{cake.name}: Цена в рублях-{cake.price}\n"
+
             keyboard = [
                 [InlineKeyboardButton("Назад", callback_data="make_order")],
             ]
