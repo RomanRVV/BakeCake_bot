@@ -17,6 +17,7 @@ env = Env()
 env.read_env()
 tg_token = env('TG_TOKEN')
 bitly_token = env('BITLY_TOKEN')
+token_pay = env('TOKEN_PAY')
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 

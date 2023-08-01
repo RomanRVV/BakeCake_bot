@@ -39,7 +39,6 @@ class Command(BaseCommand):
     help = 'Телеграм-бот'
 
     def handle(self, *args, **kwargs):
-        # tg_token = settings.TOKEN
         tg_token = settings.tg_token
         updater = Updater(token=tg_token, use_context=True)
         dispatcher = updater.dispatcher
@@ -695,7 +694,7 @@ class Command(BaseCommand):
             price_in_rubles = float(selected_cake.price)
             amount_in_kopecks = int(price_in_rubles * 100)
 
-            token = '1744374395:TEST:2a0fb65e088562e55a90'
+            token_pay = settings.token_pay
             chat_id = update.effective_message.chat_id
             context.user_data['invoice_sent'] = True
 
@@ -709,7 +708,7 @@ class Command(BaseCommand):
                 title=selected_cake.name,
                 description='Цена торта',
                 payload='payload',
-                provider_token=token,
+                provider_token=token_pay,
                 currency='RUB',
                 need_phone_number=False,
                 need_email=False,
@@ -799,7 +798,7 @@ class Command(BaseCommand):
             query.edit_message_text(
                 text=text, reply_markup=reply_markup
             )
-            return 'SHOW_ANSWER'
+            return 'GREETINGS'
 
         def show_common_info(update, context):
             query = update.callback_query
